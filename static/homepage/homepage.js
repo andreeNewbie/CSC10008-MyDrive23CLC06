@@ -42,8 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData(uploadForm);
         const file = formData.get('file');
         const fileId = `${file.name}-${Date.now()}`;
-        const numberOfSegments = 20;
-        const segmentSize = Math.ceil(file.size / numberOfSegments); // 1MB segments
+        const segmentSize = 300 * 1024; // 1MB segments
+        const numberOfSegments = Math.ceil(file.size / segmentSize);
 
         socket.emit('upload_file_info', {
             token: token,
@@ -51,23 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
             file_name: file.name,
             number_of_segments: numberOfSegments
         });
-
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const fileData = event.target.result;
-            for (let i = 0; i < numberOfSegments; i++) {
-                const segmentData = fileData.slice(i * segmentSize, Math.min((i + 1) * segmentSize, file.size));
-                setTimeout(() => {
-                    socket.emit('upload_segment', {
-                        token: token,
-                        file_id: fileId,
-                        index: i,
-                        data: segmentData
-                    });
-                }, i * 100); // Thêm delay 0.1 giây giữa các lần gửi phân đoạn
-            }
-        };
-        reader.readAsArrayBuffer(file);
+        
+        const uploaderInstance = uploader(socket, token, fileId, file, segmentSize, numberOfSegments);
+        uploaderInstance.send();
     });
 
     socket.on('upload_response', (data) => {
