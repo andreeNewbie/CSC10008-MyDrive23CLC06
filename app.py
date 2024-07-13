@@ -119,13 +119,14 @@ def handle_upload_file_info(data):
             'owner': current_user['username'],
             'sid': request.sid,
         }
+        print("Received file info")
     except Exception as e:
         emit('upload_response', {'message': str(e)}, room=request.sid)
 
 @socketio.on('upload_segment')
 def handle_upload_segment(data):
-    segment_index = int(data['index'])
     segment_data = data['data']
+    segment_index = int(data['index'])
     file_id = data['file_id']
     thread = threading.Thread(target=save_segment, args=(segment_index, segment_data, file_id))
     thread.start()
@@ -133,12 +134,14 @@ def handle_upload_segment(data):
     thread.join()
     
     # Kiểm tra xem tất cả các phân đoạn đã được nhận chưa
-    if None not in file_segments[file_id]:
-        write_file(file_info[file_id], file_segments[file_id])
-        emit('upload_response', {'message': 'File uploaded successfully'}, room=request.sid)
-        del file_segments[file_id]
-        del file_info[file_id]
-
+    with lock:
+        if None not in file_segments[file_id]:
+            write_file(file_info[file_id], file_segments[file_id])
+            emit('upload_response', {'message': 'File uploaded successfully'}, room=file_info[file_id]['sid'])
+            del file_segments[file_id]
+            del file_info[file_id]
+        else:
+            emit('upload_segment_response', {'status': 'ok', 'message': f'Received segment {segment_index} of file {file_id}'}, room=file_info[file_id]['sid'])
     
 @socketio.on('get_files')
 def handle_get_files(data):
