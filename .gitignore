@@ -1,0 +1,6 @@
+# Bỏ qua thư mục venv
+venv/
+
+# Bỏ qua các file biên dịch Python
+*.pyc
+__pycache__/
