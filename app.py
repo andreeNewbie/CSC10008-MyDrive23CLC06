@@ -9,6 +9,7 @@ import datetime
 from functools import wraps
 from flask_socketio import SocketIO, emit
 import threading
+import math
 
 app = Flask(__name__, static_folder='static')
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -104,6 +105,8 @@ def write_file(info, segments):
 @socketio.on('upload_file_info')
 def handle_upload_file_info(data):
     global file_info
+    global threads
+    threads = []
     token = data.get('token')
     if not token:
         emit('upload_response', {'message': 'Token is missing!'}, room=request.sid)
@@ -131,11 +134,13 @@ def handle_upload_segment(data):
     thread = threading.Thread(target=save_segment, args=(segment_index, segment_data, file_id))
     thread.start()
     print(f'Received segment {segment_index} of file {file_id}')
-    thread.join()
-    
+    threads.append(thread)
+        
     # Kiểm tra xem tất cả các phân đoạn đã được nhận chưa
     with lock:
         if None not in file_segments[file_id]:
+            for thread in threads:
+                thread.join()
             write_file(file_info[file_id], file_segments[file_id])
             emit('upload_response', {'message': 'File uploaded successfully'}, room=file_info[file_id]['sid'])
             del file_segments[file_id]
@@ -178,8 +183,8 @@ def handle_download_file_info(data):
             return
 
         file_size = file.length
-        segment_size = 1024  # 1MB segments
-        number_of_segments = (file_size + segment_size - 1) // segment_size
+        segment_size = 300 * 1024  # 30KB segments
+        number_of_segments = math.ceil(file_size / segment_size);
 
         file_info = {
             'file_name': file.filename,
@@ -211,7 +216,7 @@ def handle_download_segment(data):
             emit('download_response', {'message': 'File not found'}, room=request.sid)
             return
 
-        segment_size = 1024 * 1024  # 1MB segments
+        segment_size = 300 * 1024  # 1MB segments
         file.seek(segment_index * segment_size)
         segment_data = file.read(segment_size)
 
