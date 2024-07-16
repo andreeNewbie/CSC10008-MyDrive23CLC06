@@ -4,7 +4,7 @@ This project simulates Google Drive using Socket programming to store and downlo
 
 ## Author
 
-- **Name:** Phan Nhut Anh, Nguyen Thi Tra My, Nguyen Dinh Thai Hung
+- **Name:** Phan Nhut Anh, Nguyen Dinh Thai Hung
 
 ## Introduction
 
