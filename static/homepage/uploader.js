@@ -4,6 +4,7 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
         this.file = file;
         this.fileId = fileId;
         this.numberOfSegments = numberOfSegments;
+        this.threadsQuantity = numberOfSegments; // Số lượng kết nối đồng thời
         this.aborted = false;
         this.uploadedSize = 0;
         this.progressCache = {};
@@ -13,6 +14,7 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
 
     Uploader.prototype.setOptions = function (options = {}) {
         this.segmentSize = options.segmentSize || this.segmentSize;
+        this.threadsQuantity = options.threadsQuantity || this.threadsQuantity;
     };
 
     Uploader.prototype.setupFile = function (file) {
@@ -27,19 +29,23 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
         const chunksQuantity = this.numberOfSegments;
         this.chunksQueue = new Array(chunksQuantity).fill().map((_, index) => index).reverse();
         this.retryQueue = [];
-        
-        this.sendNext();
-    };
 
-    Uploader.prototype.send = function () {
-        this.start();
+        for (let i = 0; i < this.threadsQuantity; i++) {
+            this.sendNext();
+        }
     };
 
     Uploader.prototype.sendNext = function () {
         if (this.aborted) return;
 
+        const activeConnections = Object.keys(this.activeConnections).length;
+
+        if (activeConnections > this.threadsQuantity) {
+            return;
+        }
+
         if (!this.chunksQueue.length && !this.retryQueue.length) {
-            if (Object.keys(this.activeConnections).length === 0) {
+            if (activeConnections === 0) {
                 this.complete(null);
             }
             return;
@@ -51,22 +57,26 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
         } else if (this.retryQueue.length > 0) {
             chunkId = this.retryQueue.pop();
         } else {
-            // Không có phân đoạn nào trong hàng đợi
             console.log("No chunks left to process.");
             return;
         }
 
         const sentSize = chunkId * this.segmentSize;
         const chunk = this.file.slice(sentSize, sentSize + this.segmentSize);
+        this.activeConnections[chunkId] = true; // Đánh dấu chunkId là đang hoạt động
 
         this.sendChunk(chunk, chunkId)
             .then(() => {
-                this.sendNext();
+                delete this.activeConnections[chunkId]; // Xóa chunkId khỏi danh sách đang hoạt động
+                //this.sendNext(); // Gọi lại sendNext để gửi chunk tiếp theo
             })
             .catch((error) => {
-                this.retryQueue.push(chunkId);
-                this.sendNext();
+                delete this.activeConnections[chunkId]; // Xóa chunkId khỏi danh sách đang hoạt động
+                this.retryQueue.push(chunkId); // Đẩy chunkId vào hàng đợi retry
+                this.sendNext(); // Gọi lại sendNext để thử gửi chunk khác
             });
+
+        this.sendNext(); // Gọi sendNext để tiếp tục gửi chunk khác ngay lập tức
     };
 
     Uploader.prototype.sendChunk = function (chunk, id) {
@@ -83,7 +93,6 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
 
                 socket.once('upload_segment_response', (data) => {
                     if (data.status === 'ok') {
-                        delete this.activeConnections[id];
                         resolve();
                     } else {
                         reject(new Error('Failed chunk upload'));
@@ -94,25 +103,6 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
                 reject(error);
             };
             reader.readAsArrayBuffer(chunk);
-        });
-    };
-
-    Uploader.prototype.handleProgress = function (chunkId, event) {
-        if (event.type === "progress" || event.type === "error" || event.type === "abort") {
-            this.progressCache[chunkId] = event.loaded;
-        }
-
-        if (event.type === "loadend") {
-            this.uploadedSize += this.progressCache[chunkId] || 0;
-            delete this.progressCache[chunkId];
-        }
-
-        const inProgress = Object.keys(this.progressCache).reduce((memo, id) => memo += this.progressCache[id], 0);
-        const sentLength = Math.min(this.uploadedSize + inProgress, this.file.size);
-
-        this.onProgress({
-            loaded: sentLength,
-            total: this.file.size
         });
     };
 
