@@ -73,7 +73,7 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
             .catch((error) => {
                 delete this.activeConnections[chunkId]; // Xóa chunkId khỏi danh sách đang hoạt động
                 this.retryQueue.push(chunkId); // Đẩy chunkId vào hàng đợi retry
-                this.sendNext(); // Gọi lại sendNext để thử gửi chunk khác
+                //this.sendNext(); // Gọi lại sendNext để thử gửi chunk khác
             });
 
         this.sendNext(); // Gọi sendNext để tiếp tục gửi chunk khác ngay lập tức
