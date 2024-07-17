@@ -1,7 +1,6 @@
 Flask
 Flask-CORS
 pymongo
-gridfs
 PyJWT
 flask-socketio
 eventlet
