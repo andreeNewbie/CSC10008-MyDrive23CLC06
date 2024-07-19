@@ -4,7 +4,7 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
         this.file = file;
         this.fileId = fileId;
         this.numberOfSegments = numberOfSegments;
-        this.threadsQuantity = numberOfSegments; // Số lượng kết nối đồng thời
+        this.threadsQuantity = numberOfSegments; 
         this.aborted = false;
         this.uploadedSize = 0;
         this.progressCache = {};
@@ -30,7 +30,7 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
         this.chunksQueue = new Array(chunksQuantity).fill().map((_, index) => index).reverse();
         this.retryQueue = [];
 
-        for (let i = 0; i < this.threadsQuantity; i++) {
+        for (let i = 0; i < this.numberOfSegments; i++) {
             this.sendNext();
         }
     };
@@ -68,12 +68,12 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
         this.sendChunk(chunk, chunkId)
             .then(() => {
                 delete this.activeConnections[chunkId]; // Xóa chunkId khỏi danh sách đang hoạt động
-                //this.sendNext(); // Gọi lại sendNext để gửi chunk tiếp theo
+                this.sendNext(); // Gọi lại sendNext để gửi chunk tiếp theo
             })
             .catch((error) => {
                 delete this.activeConnections[chunkId]; // Xóa chunkId khỏi danh sách đang hoạt động
                 this.retryQueue.push(chunkId); // Đẩy chunkId vào hàng đợi retry
-                //this.sendNext(); // Gọi lại sendNext để thử gửi chunk khác
+                this.sendNext(); // Gọi lại sendNext để thử gửi chunk khác
             });
 
         this.sendNext(); // Gọi sendNext để tiếp tục gửi chunk khác ngay lập tức

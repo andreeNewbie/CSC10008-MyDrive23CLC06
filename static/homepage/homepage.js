@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData(uploadForm);
         const file = formData.get('file');
         const fileId = `${file.name}-${Date.now()}`;
-        const segmentSize = 300 * 1024; // 1MB segments
+        const segmentSize = 1024 * 1024; // 1MB segments
         const numberOfSegments = Math.ceil(file.size / segmentSize);
 
         socket.emit('upload_file_info', {
