@@ -1,6 +1,10 @@
 Flask
 Flask-CORS
 pymongo
+<<<<<<< HEAD
+=======
+gridfs
+>>>>>>> 5cce39a (Add code to our Project)
 PyJWT
 flask-socketio
 eventlet
