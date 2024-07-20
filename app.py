@@ -128,7 +128,7 @@ def handle_upload_segment(data):
     file_id = data['file_id']
     
     if file_id not in file_info:
-        emit('upload_segment_response', {'status': 'error', 'message': 'File info not found'}, room=request.sid) #Xu li loi nay
+        emit('upload_segment_response', {'status': 'error', 'message': 'File info not found'}, room=request.sid)
         return
 
     if file_id not in file_segments:
@@ -136,14 +136,9 @@ def handle_upload_segment(data):
         
     if file_segments[file_id][segment_index] is None:
         socketio.start_background_task(target=save_segment, segment_index=segment_index, segment_data=segment_data, file_id=file_id)
-        # thread = threading.Thread(target=save_segment, args=(segment_index, segment_data, file_id))
-        # thread.start()
         print(f'Received segment {segment_index} of file {file_id}')
-        # threads.append(thread)
         
     if None not in file_segments[file_id]:
-        # for thread in threads:
-        #     thread.join()
         write_file(file_info[file_id], file_segments[file_id])
         emit('upload_response', {'message': 'File uploaded successfully'}, room=file_info[file_id]['sid'])
         del file_segments[file_id]
@@ -179,6 +174,7 @@ def handle_download_file_info(data):
         return
 
     try:
+        global file_data
         global file
         decoded = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
         current_user = users_collection.find_one({'username': decoded['username']})
@@ -189,8 +185,12 @@ def handle_download_file_info(data):
             return
         
         file_size = file.length
-        segment_size = 300 * 1024  # 30KB segments
-        number_of_segments = math.ceil(file_size / segment_size);
+        segment_size = 300 * 1024  # 300KB segments
+        number_of_segments = math.ceil(file_size / segment_size)
+
+        # Đọc toàn bộ tệp vào bộ nhớ đệm
+        file_data = {}
+        file_data[file_id] = fs.get(ObjectId(file_id)).read()
 
         global file_download_info
         global sent_segments
@@ -211,38 +211,42 @@ def handle_download_file_info(data):
     except Exception as e:
         emit('download_response', {'message': str(e)}, room=request.sid)
 
+def thread_send_segment(token, file_id, segment_index, sid):
+    if not token:
+        socketio.emit('download_response', {'message': 'Token is missing!'}, room=sid)
+        return
+    try:
+        segment_size = 300 * 1024
+        offset = segment_index * segment_size
+
+        with lock:
+            segment_data = file_data[file_id][offset:offset + segment_size]
+        
+        sent_segments[file_id].append(segment_index)
+        print(f"Starting send segment {segment_index}")
+        socketio.emit('download_segment_response', {'index': segment_index, 'data': segment_data, 'file_id': file_id}, room=sid)
+        print(f"Sent segment {segment_index} successfully.")
+        if len(sent_segments[file_id]) == file_download_info['number_of_segments']:
+            print(f"Download file {file_download_info['file_name']} successfully")
+            del file_data[file_id]
+
+    except Exception as e:
+        socketio.emit('download_response', {'message': str(e)}, room=sid)
+
 @socketio.on('download_segment')
 def handle_download_segment(data):
     token = data.get('token')
     file_id = data.get('file_id')
     segment_index = data.get('index')
     
+    if file_id not in file_data:
+        emit('download_segment_response', {'status': 'error', 'message': 'Segment have downloaded before'}, room=request.sid)    
+        return;
     if segment_index in sent_segments[file_id]: 
         emit('download_segment_response', {'status': 'error', 'message': 'Segment have downloaded before'}, room=request.sid)
         return
-    
-    def thread_send_segment(token, file_id, segment_index, sid):
-        if not token:
-            socketio.emit('download_response', {'message': 'Token is missing!'}, room=sid)
-            return
-        try:
-            segment_size = 300 * 1024  # 300KB segments
-            file.seek(segment_index * segment_size)
-            segment_data = file.read(segment_size)
-            sent_segments[file_id].append(segment_index)
-            socketio.emit('download_segment_response', {'index': segment_index, 'data': segment_data, 'file_id': file_id}, room=sid)
-            print(f"Sent segment {segment_index} successfully.")
-            if len(sent_segments[file_id]) == file_download_info['number_of_segments']:
-                print(f"Download file {file_download_info['file_name']} successfully")
-  
-            
-        except Exception as e:
-            socketio.emit('download_response', {'message': str(e)}, room=sid)
-            
-    # thread = threading.Thread(target=thread_send_segment, args=(token, file_id, segment_index, request.sid))
-    # thread.start()
-    # threads.append(thread)    
-    socketio.start_background_task(target=thread_send_segment, token=token, file_id=file_id, segment_index=segment_index, sid=request.sid)
+    else:
+        socketio.start_background_task(target=thread_send_segment, token=token, file_id=file_id, segment_index=segment_index, sid=request.sid)
         
 if __name__ == '__main__':
     socketio.run(app, debug=True, port=3000)

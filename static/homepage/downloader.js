@@ -5,6 +5,7 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
         this.fileName = fileName;
         this.numberOfSegments = numberOfSegments;
         this.downloadedSegments = new Array(numberOfSegments).fill(null);
+        this.threadsQuantity = 5; 
         this.activeConnections = {};
         this.aborted = false;
         this.dataFile = null;
@@ -20,15 +21,15 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
         this.dataFile = new Blob(); // Khởi tạo Blob để lưu trữ dữ liệu của file
         this.chunksQueue = new Array(this.numberOfSegments).fill().map((_, index) => index).reverse();
         this.retryQueue = [];
+        console.log("Download starting.");
         this.downChunks();
     };
 
     Downloader.prototype.downChunks = function () {
         if (this.aborted) return;
 
-        for (let i = 0; i < this.numberOfSegments; i++) {
-            this.downNext();
-        }
+        console.log("Start download chunks");
+        this.downNext();
     };
 
     Downloader.prototype.downNext = function () {
@@ -36,12 +37,13 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
 
         const activeConnections = Object.keys(this.activeConnections).length;
 
-        if (activeConnections + 1 >= this.numberOfSegments) {
+        if (activeConnections >= this.threadsQuantity) {
             return;
         }
-
+        
         if (!this.chunksQueue.length && !this.retryQueue.length) {
             if (activeConnections === 0) {
+                console.log("Having received full segment.")
                 this.completeDownload();
             }
             return;
@@ -69,7 +71,7 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
                 this.downNext(); // Gọi lại downNext để thử tải đoạn khác
             });
 
-        this.downNext(); // Gọi downNext để tiếp tục tải đoạn khác ngay lập tức
+        this.downNext();
     };
 
     Downloader.prototype.downloadSegment = function (segmentIndex) {
@@ -81,9 +83,7 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
                 file_id: this.fileId,
                 index: segmentIndex
             });
-            
-            console.log(segmentIndex)
-
+            console.log("Start download segment " + segmentIndex);
             socket.once('download_segment_response', (data) => {
                 if (data.status === 'error' && data.message === 'Segment have downloaded before') {
                     resolve();

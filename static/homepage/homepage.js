@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-        timeout: 20000
+        timeout: 2000
     });
 
     const token = localStorage.getItem('token');
@@ -93,16 +93,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('download_file_info', (data) => {
         const { file_name, file_size, number_of_segments, file_id } = data;
-        
+        console.log("Received downloaded file info.")
+
         const downloaderInstance = downloader(socket, token, file_id, file_name, 300 * 1024, number_of_segments);
         downloaderInstance.start();
     });
 
 
     socket.on('download_response', (data) => {
-        if (data.message) {
-            alert(data.message);
-        }
+        // if (data.message) {
+        //     alert(data.message);
+        // }
     });
 
     fetchFiles();

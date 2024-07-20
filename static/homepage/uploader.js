@@ -4,7 +4,7 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
         this.file = file;
         this.fileId = fileId;
         this.numberOfSegments = numberOfSegments;
-        this.threadsQuantity = numberOfSegments; 
+        this.threadsQuantity = 5; 
         this.aborted = false;
         this.uploadedSize = 0;
         this.progressCache = {};
@@ -30,9 +30,7 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
         this.chunksQueue = new Array(chunksQuantity).fill().map((_, index) => index).reverse();
         this.retryQueue = [];
 
-        for (let i = 0; i < this.numberOfSegments; i++) {
-            this.sendNext();
-        }
+        this.sendNext();
     };
 
     Uploader.prototype.sendNext = function () {
