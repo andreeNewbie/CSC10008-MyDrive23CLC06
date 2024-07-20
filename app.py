@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from pymongo import MongoClient
-import os
 from bson import ObjectId
 import gridfs
 import jwt
@@ -10,7 +9,6 @@ from functools import wraps
 from flask_socketio import SocketIO, emit
 import threading
 import math
-import concurrent.futures
 
 app = Flask(__name__, static_folder='static')
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -91,7 +89,6 @@ def handle_disconnect():
 file_segments = {}
 file_info = {}
 lock = threading.Lock()
-file_info
 threads = []
 
 def save_segment(segment_index, segment_data, file_id):
@@ -136,23 +133,22 @@ def handle_upload_segment(data):
 
     if file_id not in file_segments:
         file_segments[file_id] = [None] * file_info[file_id]['number_of_segments']
+        
     if file_segments[file_id][segment_index] is None:
         thread = threading.Thread(target=save_segment, args=(segment_index, segment_data, file_id))
         thread.start()
         print(f'Received segment {segment_index} of file {file_id}')
         threads.append(thread)
         
-        if None not in file_segments[file_id]:
-            for thread in threads:
-                thread.join()
-            write_file(file_info[file_id], file_segments[file_id])
-            emit('upload_response', {'message': 'File uploaded successfully'}, room=file_info[file_id]['sid'])
-            del file_segments[file_id]
-            del file_info[file_id]
-        else:
-            emit('upload_segment_response', {'status': 'ok', 'message': f'Received segment {segment_index} of file {file_id}'}, room=file_info[file_id]['sid'])
+    if None not in file_segments[file_id]:
+        for thread in threads:
+            thread.join()
+        write_file(file_info[file_id], file_segments[file_id])
+        emit('upload_response', {'message': 'File uploaded successfully'}, room=file_info[file_id]['sid'])
+        del file_segments[file_id]
+        del file_info[file_id]
     else:
-        emit('upload_segment_response', {'status': 'missing', 'message': f'Segment {segment_index} of file {file_id} had received before'}, room=file_info[file_id]['sid'])
+        emit('upload_segment_response', {'status': 'ok', 'message': f'Received segment {segment_index} of file {file_id}'}, room=file_info[file_id]['sid'])
 
     
 @socketio.on('get_files')
@@ -172,32 +168,35 @@ def handle_get_files(data):
     except Exception as e:
         emit('file_list', {'message': str(e)}, room=request.sid)
 
-
 @socketio.on('download_file_info')
 def handle_download_file_info(data):
     token = data.get('token')
     file_id = data.get('file_id')
-
+    
     if not token:
         emit('download_response', {'message': 'Token is missing!'}, room=request.sid)
         return
 
     try:
+        global file
         decoded = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
         current_user = users_collection.find_one({'username': decoded['username']})
         file = fs.find_one({"_id": ObjectId(file_id)})
+        
         if not file:
             emit('download_response', {'message': 'File not found'}, room=request.sid)
             return
-
+        
         file_size = file.length
         segment_size = 300 * 1024  # 30KB segments
         number_of_segments = math.ceil(file_size / segment_size);
 
-        global countSegment
         global file_download_info
+        global sent_segments
         
-        countSegment = 0
+        sent_segments = {}
+        sent_segments[file_id] = []
+        
         file_download_info = {
             'file_name': file.filename,
             'file_size': file_size,
@@ -206,30 +205,7 @@ def handle_download_file_info(data):
         }
 
         emit('download_file_info', file_download_info, room=request.sid)
-
-    except Exception as e:
-        emit('download_response', {'message': str(e)}, room=request.sid)
-
-@socketio.on('send_segment')
-def thread_send_segment(token, file_id, segment_index):
-    if not token:
-        emit('download_response', {'message': 'Token is missing!'}, room=request.sid)
-        return
-
-    try:
-        decoded = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
-        current_user = users_collection.find_one({'username': decoded['username']})
-        file = fs.find_one({"_id": ObjectId(file_id)})
-        if not file:
-            emit('download_response', {'message': 'File not found'}, room=request.sid)
-            return
-
-        segment_size = 300 * 1024  # 1MB segments
-        file.seek(segment_index * segment_size)
-        segment_data = file.read(segment_size)
-
-        emit('download_segment', {'index': segment_index, 'data': segment_data, 'file_id': file_id}, room=request.sid)
-        countSegment += 1
+        print(f"Sent file info of file {file_download_info['file_name']}")
 
     except Exception as e:
         emit('download_response', {'message': str(e)}, room=request.sid)
@@ -239,14 +215,30 @@ def handle_download_segment(data):
     token = data.get('token')
     file_id = data.get('file_id')
     segment_index = data.get('index')
-
-    thread = threading.Thread(target=thread_send_segment, args=(token, file_id, segment_index, request.sid))
-    threads.append(thread)
-    thread.start()
     
-    if countSegment == file_download_info['number_of_segments']:
-        for thread in threads:
-            thread.join()
+    if segment_index in sent_segments[file_id]: 
+        emit('download_segment_response', {'status': 'error', 'message': 'Segment have downloaded before'}, room=request.sid)
+        return
+    
+    def thread_send_segment(token, file_id, segment_index, sid):
+        if not token:
+            socketio.emit('download_response', {'message': 'Token is missing!'}, room=sid)
+            return
+        try:
+            segment_size = 300 * 1024  # 300KB segments
+            file.seek(segment_index * segment_size)
+            segment_data = file.read(segment_size)
+            sent_segments[file_id].append(segment_index)
+            socketio.emit('download_segment_response', {'index': segment_index, 'data': segment_data, 'file_id': file_id}, room=sid)
+            print(f"Sent segment {segment_index} successfully.")
+            if len(sent_segments[file_id]) == file_download_info['number_of_segments']:
+                print(f"Download file {file_download_info['file_name']} successfully")
+  
+            
+        except Exception as e:
+            socketio.emit('download_response', {'message': str(e)}, room=sid)
+    
+    socketio.start_background_task(target=thread_send_segment, token=token, file_id=file_id, segment_index=segment_index, sid=request.sid)
     
 if __name__ == '__main__':
     socketio.run(app, debug=True, port=3000)
