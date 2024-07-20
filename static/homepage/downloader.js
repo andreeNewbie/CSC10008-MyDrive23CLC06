@@ -36,7 +36,7 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
 
         const activeConnections = Object.keys(this.activeConnections).length;
 
-        if (activeConnections >= this.numberOfSegments) {
+        if (activeConnections + 1 >= this.numberOfSegments) {
             return;
         }
 
@@ -81,6 +81,9 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
                 file_id: this.fileId,
                 index: segmentIndex
             });
+            
+            console.log(segmentIndex)
+
             socket.once('download_segment_response', (data) => {
                 if (data.status === 'error' && data.message === 'Segment have downloaded before') {
                     resolve();

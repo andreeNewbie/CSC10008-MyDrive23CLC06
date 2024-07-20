@@ -90,44 +90,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    let downloadSegments = {};
-    let fileMeta = {};
 
     socket.on('download_file_info', (data) => {
         const { file_name, file_size, number_of_segments, file_id } = data;
-
-        downloadSegments[file_id] = [];
-        fileMeta[file_id] = { filename: file_name, segments: number_of_segments };
-
-        for (let i = 0; i < number_of_segments; i++) {
-            socket.emit('download_segment', { token: token, file_id: file_id, index: i });
-        }
+        
+        const downloaderInstance = downloader(socket, token, file_id, file_name, 300 * 1024, number_of_segments);
+        downloaderInstance.start();
     });
 
-    socket.on('download_segment', (data) => {
-        const { index, data: segmentData, file_id } = data;
-
-        if (!downloadSegments[file_id]) {
-            downloadSegments[file_id] = [];
-        }
-
-        downloadSegments[file_id][index] = segmentData;
-
-        if (downloadSegments[file_id].filter(Boolean).length === fileMeta[file_id].segments) {
-            const blob = new Blob(downloadSegments[file_id]);
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = fileMeta[file_id].filename;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-
-            delete downloadSegments[file_id];
-            delete fileMeta[file_id];
-        }
-    });
 
     socket.on('download_response', (data) => {
         if (data.message) {

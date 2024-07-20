@@ -135,14 +135,15 @@ def handle_upload_segment(data):
         file_segments[file_id] = [None] * file_info[file_id]['number_of_segments']
         
     if file_segments[file_id][segment_index] is None:
-        thread = threading.Thread(target=save_segment, args=(segment_index, segment_data, file_id))
-        thread.start()
+        socketio.start_background_task(target=save_segment, segment_index=segment_index, segment_data=segment_data, file_id=file_id)
+        # thread = threading.Thread(target=save_segment, args=(segment_index, segment_data, file_id))
+        # thread.start()
         print(f'Received segment {segment_index} of file {file_id}')
-        threads.append(thread)
+        # threads.append(thread)
         
     if None not in file_segments[file_id]:
-        for thread in threads:
-            thread.join()
+        # for thread in threads:
+        #     thread.join()
         write_file(file_info[file_id], file_segments[file_id])
         emit('upload_response', {'message': 'File uploaded successfully'}, room=file_info[file_id]['sid'])
         del file_segments[file_id]
@@ -237,8 +238,11 @@ def handle_download_segment(data):
             
         except Exception as e:
             socketio.emit('download_response', {'message': str(e)}, room=sid)
-    
+            
+    # thread = threading.Thread(target=thread_send_segment, args=(token, file_id, segment_index, request.sid))
+    # thread.start()
+    # threads.append(thread)    
     socketio.start_background_task(target=thread_send_segment, token=token, file_id=file_id, segment_index=segment_index, sid=request.sid)
-    
+        
 if __name__ == '__main__':
     socketio.run(app, debug=True, port=3000)
