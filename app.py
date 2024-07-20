@@ -49,14 +49,21 @@ def token_required(f):
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
+    if not data:
+        return jsonify({'message': 'No input data provided'}), 400
+
     username = data.get('username')
     password = data.get('password')
 
-    if users_collection.find_one({'username': username}):
-        return jsonify({'message': 'User already exists'}), 400
+    if not username or not password:
+        return jsonify({'message': 'Missing username or password'}), 400
+
+    existing_user = users_collection.find_one({'username': username})
+    if existing_user:
+        return jsonify({'message': 'Username already exists'}), 400
 
     users_collection.insert_one({'username': username, 'password': password})
-    return jsonify({'message': 'User registered successfully'}), 201
+    return jsonify({'message': 'User registered successfully', 'username': username, 'password': password}), 201
 
 @app.route('/login', methods=['POST'])
 def login():
