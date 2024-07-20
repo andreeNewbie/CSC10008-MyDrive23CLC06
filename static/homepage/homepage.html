@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyDrive</title>
+    <link rel="stylesheet" href="homepage.css">
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="uploader.js"></script>
+    <script src="downloader.js"></script> <!-- Ensure uploader.js is loaded before homepage.js -->
+    <script src="homepage.js"></script>
+</head>
+<body>
+    <header>
+        <div class="nav-bar">
+            <div class="logo">MyDrive</div>
+            <input type="text" id="search" placeholder="Search in Drive" aria-label="Search">
+            <div class="user-info">
+                <span id="username">Username</span>
+            </div>
+        </div>
+    </header>
+    <main>
+        <div class="sidebar">
+            <button id="new-file" title="Upload new file">+ New</button>
+        </div>
+        <div class="content">
+            <h1>Welcome to MyDrive</h1>
+            <table id="file-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Owner</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Files will be populated here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal for File Upload -->
+    <div id="upload-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" title="Close">&times;</span>
+            <form id="upload-form" aria-label="Upload form">
+                <label for="file">Choose file to upload:</label>
+                <input type="file" id="file" name="file" required title="Choose file">
+                <button type="submit" title="Upload file">Upload</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
