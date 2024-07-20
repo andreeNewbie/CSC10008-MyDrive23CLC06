@@ -42,13 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData(uploadForm);
         const file = formData.get('file');
         const fileId = `${file.name}-${Date.now()}`;
-<<<<<<< HEAD
         const segmentSize = 300 * 1024; // 1MB segments
         const numberOfSegments = Math.ceil(file.size / segmentSize);
-=======
-        const numberOfSegments = 20;
-        const segmentSize = Math.ceil(file.size / numberOfSegments); // 1MB segments
->>>>>>> 5cce39a (Add code to our Project)
 
         socket.emit('upload_file_info', {
             token: token,
@@ -56,29 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
             file_name: file.name,
             number_of_segments: numberOfSegments
         });
-<<<<<<< HEAD
         
         const uploaderInstance = uploader(socket, token, fileId, file, segmentSize, numberOfSegments);
         uploaderInstance.send();
-=======
-
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const fileData = event.target.result;
-            for (let i = 0; i < numberOfSegments; i++) {
-                const segmentData = fileData.slice(i * segmentSize, Math.min((i + 1) * segmentSize, file.size));
-                setTimeout(() => {
-                    socket.emit('upload_segment', {
-                        token: token,
-                        file_id: fileId,
-                        index: i,
-                        data: segmentData
-                    });
-                }, i * 100); // Thêm delay 0.1 giây giữa các lần gửi phân đoạn
-            }
-        };
-        reader.readAsArrayBuffer(file);
->>>>>>> 5cce39a (Add code to our Project)
     });
 
     socket.on('upload_response', (data) => {
@@ -115,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-<<<<<<< HEAD
 
     socket.on('download_file_info', (data) => {
         const { file_name, file_size, number_of_segments, file_id } = data;
@@ -124,46 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
         downloaderInstance.start();
     });
 
-=======
-    let downloadSegments = {};
-    let fileMeta = {};
-
-    socket.on('download_file_info', (data) => {
-        const { file_name, file_size, number_of_segments, file_id } = data;
-
-        downloadSegments[file_id] = [];
-        fileMeta[file_id] = { filename: file_name, segments: number_of_segments };
-
-        for (let i = 0; i < number_of_segments; i++) {
-            socket.emit('download_segment', { token: token, file_id: file_id, index: i });
-        }
-    });
-
-    socket.on('download_segment', (data) => {
-        const { index, data: segmentData, file_id } = data;
-
-        if (!downloadSegments[file_id]) {
-            downloadSegments[file_id] = [];
-        }
-
-        downloadSegments[file_id][index] = segmentData;
-
-        if (downloadSegments[file_id].filter(Boolean).length === fileMeta[file_id].segments) {
-            const blob = new Blob(downloadSegments[file_id]);
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = fileMeta[file_id].filename;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-
-            delete downloadSegments[file_id];
-            delete fileMeta[file_id];
-        }
-    });
->>>>>>> 5cce39a (Add code to our Project)
 
     socket.on('download_response', (data) => {
         if (data.message) {
