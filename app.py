@@ -102,7 +102,6 @@ def write_file(info, segments):
     
 @socketio.on('upload_file_info')
 def handle_upload_file_info(data):
-    global file_info
     token = data.get('token')
     if not token:
         emit('upload_response', {'message': 'Token is missing!'}, room=request.sid)
@@ -174,6 +173,7 @@ def handle_get_files(data):
 def handle_download_file_info(data):
     token = data.get('token')
     file_id = data.get('file_id')
+    
     if not token:
         emit('download_response', {'message': 'Token is missing!'}, room=request.sid)
         return
