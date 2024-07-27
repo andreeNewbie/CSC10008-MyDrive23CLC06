@@ -71,7 +71,7 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
                 this.downNext(); // Gọi lại downNext để thử tải đoạn khác
             });
 
-        this.downNext();
+        //this.downNext();
     };
 
     Downloader.prototype.downloadSegment = function (segmentIndex) {
