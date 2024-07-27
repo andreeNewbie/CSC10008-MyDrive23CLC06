@@ -29,15 +29,6 @@ header {
     margin-left: 20px;
 }
 
-#search {
-    padding: 10px;
-    width: 300px;
-    margin: 0 auto; /* Center the search bar */
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
 .user-info {
     font-size: 18px;
     margin-right: 20px;
@@ -45,10 +36,12 @@ header {
 }
 
 .sidebar {
-    width: 200px;
+    width: 190px;
     background-color: #f8f8f8;
     padding: 20px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    position: fixed;
+    height: 100%;
 }
 
 #new-file {
@@ -61,10 +54,12 @@ header {
 .content {
     margin-left: 220px;
     padding: 20px;
+    margin-top: 0; /* Adjust this value to move the content up */
 }
 
 h1 {
     font-size: 32px;
+    margin-top: 0; /* Adjust this value to move the title up */
 }
 
 table {
@@ -124,11 +119,11 @@ input, button {
     appearance: none;
 }
 
-/* Add -webkit prefix for compatibility */
 #search {
     -webkit-user-select: auto;
     user-select: auto;
 }
+
 .status-bar {
     position: fixed;
     bottom: 0;
