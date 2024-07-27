@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModal = document.getElementsByClassName('close')[0];
     const uploadForm = document.getElementById('upload-form');
     const fileTableBody = document.querySelector('#file-table tbody');
+    const statusBar = document.getElementById('status-bar');
 
     newFileButton.addEventListener('click', () => {
         uploadModal.style.display = 'block';
@@ -70,6 +71,16 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.emit('get_files', { token: token });
     }
 
+    function showStatusBar() {
+        statusBar.classList.remove('hidden');
+        statusBar.classList.add('visible');
+    }
+
+    function hideStatusBar() {
+        statusBar.classList.remove('visible');
+        statusBar.classList.add('hidden');
+    }
+
     socket.on('file_list', (files) => {
         fileTableBody.innerHTML = '';
         files.forEach(file => {
@@ -84,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.download-btn').forEach(button => {
             button.addEventListener('click', (event) => {
+                showStatusBar();
                 const fileId = event.target.dataset.id;
                 socket.emit('download_file_info', { token: token, file_id: fileId });
             });
@@ -101,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     socket.on('download_response', (data) => {
+        hideStatusBar();
         // if (data.message) {
         //     alert(data.message);
         // }

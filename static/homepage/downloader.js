@@ -99,6 +99,14 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
         });
     };
 
+    function hideStatusBar() {
+        const statusBar = document.getElementById('status-bar');
+        if (statusBar) {
+            statusBar.classList.remove('visible');
+            statusBar.classList.add('hidden');
+        }
+    }
+    
     Downloader.prototype.completeDownload = function () {
         // Sắp xếp các segment theo đúng thứ tự và ghi vào Blob
         this.downloadedSegments.forEach(segment => {
@@ -113,6 +121,8 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
+
+        hideStatusBar();
     };
 
     Downloader.prototype.abort = function () {
