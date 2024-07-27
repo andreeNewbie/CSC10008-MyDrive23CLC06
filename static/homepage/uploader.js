@@ -61,20 +61,22 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
 
         const sentSize = chunkId * this.segmentSize;
         const chunk = this.file.slice(sentSize, sentSize + this.segmentSize);
-        this.activeConnections[chunkId] = true; // Đánh dấu chunkId là đang hoạt động
+        this.activeConnections[chunkId] = true;
 
         this.sendChunk(chunk, chunkId)
             .then(() => {
-                delete this.activeConnections[chunkId]; // Xóa chunkId khỏi danh sách đang hoạt động
-                this.sendNext(); // Gọi lại sendNext để gửi chunk tiếp theo
+                delete this.activeConnections[chunkId];
+                this.uploadedSize += chunk.size;
+                if (this.onProgress) this.onProgress(this.uploadedSize, this.file.size);
+                this.sendNext();
             })
             .catch((error) => {
-                delete this.activeConnections[chunkId]; // Xóa chunkId khỏi danh sách đang hoạt động
-                this.retryQueue.push(chunkId); // Đẩy chunkId vào hàng đợi retry
-                this.sendNext(); // Gọi lại sendNext để thử gửi chunk khác
+                delete this.activeConnections[chunkId];
+                this.retryQueue.push(chunkId);
+                this.sendNext();
             });
 
-        this.sendNext(); // Gọi sendNext để tiếp tục gửi chunk khác ngay lập tức
+        this.sendNext();
     };
 
     Uploader.prototype.sendChunk = function (chunk, id) {

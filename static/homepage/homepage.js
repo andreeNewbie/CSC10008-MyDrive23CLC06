@@ -46,6 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const segmentSize = 300 * 1024; // 1MB segments
         const numberOfSegments = Math.ceil(file.size / segmentSize);
 
+        showStatusBar("Uploading...");
+        uploadModal.style.display = 'none';
+
         socket.emit('upload_file_info', {
             token: token,
             file_id: fileId,
@@ -59,8 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('upload_response', (data) => {
         if (data.message === 'File uploaded successfully') {
-            uploadModal.style.display = 'none';
             alert(data.message);
+            hideStatusBar();
             socket.emit('get_files', { token: token });
         } else {
             alert("Error: " + data.message);
@@ -71,7 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.emit('get_files', { token: token });
     }
 
-    function showStatusBar() {
+    function showStatusBar(message) {
+        statusBar.textContent = message;
         statusBar.classList.remove('hidden');
         statusBar.classList.add('visible');
     }
@@ -95,13 +99,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.download-btn').forEach(button => {
             button.addEventListener('click', (event) => {
-                showStatusBar();
+                showStatusBar("Downloading...");
                 const fileId = event.target.dataset.id;
                 socket.emit('download_file_info', { token: token, file_id: fileId });
             });
         });
     });
-
 
     socket.on('download_file_info', (data) => {
         const { file_name, file_size, number_of_segments, file_id } = data;
@@ -111,12 +114,8 @@ document.addEventListener('DOMContentLoaded', () => {
         downloaderInstance.start();
     });
 
-
     socket.on('download_response', (data) => {
         hideStatusBar();
-        // if (data.message) {
-        //     alert(data.message);
-        // }
     });
 
     fetchFiles();
