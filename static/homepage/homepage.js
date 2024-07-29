@@ -62,8 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('upload_response', (data) => {
         if (data.message === 'File uploaded successfully') {
-            alert(data.message);
             hideStatusBar();
+            alert(data.message);
             socket.emit('get_files', { token: token });
         } else {
             alert("Error: " + data.message);
