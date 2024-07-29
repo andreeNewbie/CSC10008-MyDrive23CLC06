@@ -18,7 +18,7 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
     };
 
     Downloader.prototype.start = function () {
-        this.dataFile = new Blob(); // Khởi tạo Blob để lưu trữ dữ liệu của file
+        this.dataFile = new Blob(); // Initialize Blob to store file data
         this.chunksQueue = new Array(this.numberOfSegments).fill().map((_, index) => index).reverse();
         this.retryQueue = [];
         console.log("Download starting.");
@@ -59,16 +59,16 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
             return;
         }
 
-        this.activeConnections[segmentIndex] = true; // Đánh dấu segmentIndex là đang hoạt động
+        this.activeConnections[segmentIndex] = true; // Mark segmentIndex as active
         this.downloadSegment(segmentIndex)
             .then(() => {
-                delete this.activeConnections[segmentIndex]; // Xóa segmentIndex khỏi danh sách đang hoạt động
-                this.downNext(); // Gọi lại downNext để tải đoạn tiếp theo
+                delete this.activeConnections[segmentIndex]; // Remove segmentIndex from active list
+                this.downNext(); // Call downNext to download the next segment
             })
             .catch((error) => {
-                delete this.activeConnections[segmentIndex]; // Xóa segmentIndex khỏi danh sách đang hoạt động
-                this.retryQueue.push(segmentIndex); // Đẩy segmentIndex vào hàng đợi retry
-                this.downNext(); // Gọi lại downNext để thử tải đoạn khác
+                delete this.activeConnections[segmentIndex]; // Remove segmentIndex from active list
+                this.retryQueue.push(segmentIndex); // Push segmentIndex to retry queue
+                this.downNext(); // Call downNext to try downloading another segment
             });
 
         //this.downNext();
@@ -99,35 +99,40 @@ const downloader = function (socket, token, fileId, fileName, segmentSize, numbe
         });
     };
 
-    function hideStatusBar() {
-        const statusBar = document.getElementById('status-bar');
-        if (statusBar) {
-            statusBar.classList.remove('visible');
-            statusBar.classList.add('hidden');
-        }
-    }
-    
     Downloader.prototype.completeDownload = function () {
-        // Sắp xếp các segment theo đúng thứ tự và ghi vào Blob
+        // Sort segments in the correct order and write to Blob
         this.downloadedSegments.forEach(segment => {
             this.dataFile = new Blob([this.dataFile, segment], { type: 'application/octet-stream' });
         });
+
+        const statusBar = document.getElementById('status-bar');
+        statusBar.style.backgroundColor = 'green'; // Set to green on completion
+        statusBar.textContent = "Download Complete";
 
         const url = window.URL.createObjectURL(this.dataFile);
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        a.download = this.fileName; // Sử dụng tên file thực tế
+        a.download = this.fileName; // Use the actual file name
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
 
-        hideStatusBar();
+        setTimeout(hideStatusBar, 2000); // Hide the status bar after 2 seconds
     };
 
     Downloader.prototype.abort = function () {
         this.aborted = true;
     };
+
+    function hideStatusBar() {
+        const statusBar = document.getElementById('status-bar');
+        if (statusBar) {
+            statusBar.classList.remove('visible');
+            statusBar.classList.add('hidden');
+            statusBar.style.backgroundColor = 'yellow'; 
+        }
+    }
 
     const instance = new Downloader();
 

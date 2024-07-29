@@ -44,6 +44,9 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
 
         if (!this.chunksQueue.length && !this.retryQueue.length) {
             if (activeConnections === 0) {
+                const statusBar = document.getElementById('status-bar');
+                statusBar.style.backgroundColor = 'green';
+                statusBar.textContent = "Upload Complete";
                 this.complete(null);
             }
             return;
@@ -111,7 +114,6 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
             this.end(error);
             return;
         }
-        setTimeout(() => this.start(), 0);
         this.end(error);
     };
 
@@ -130,6 +132,33 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
 
         this[method] = callback;
     };
+
+    function hideStatusBar() {
+        const statusBar = document.getElementById('status-bar');
+        if (statusBar) {
+            statusBar.classList.remove('visible');
+            statusBar.classList.add('hidden');
+            statusBar.style.backgroundColor = 'yellow'; // Reset to yellow
+        }
+    }
+
+    function showMessageBox(message) {
+        const messageBox = document.querySelector('.message-box');
+        messageBox.innerHTML = `
+            <p>${message}</p>
+            <button id="confirmButton">OK</button>
+        `;
+        messageBox.classList.add('visible');
+
+        const confirmButton = document.getElementById('confirmButton');
+        confirmButton.removeEventListener('click', hideMessageBox); // Remove previous event listener if any
+        confirmButton.addEventListener('click', hideMessageBox, { once: true }); // Add event listener with { once: true } option
+    }
+
+    function hideMessageBox() {
+        const messageBox = document.querySelector('.message-box');
+        messageBox.classList.remove('visible');
+    }
 
     const multithreadedUploader = new Uploader();
 

@@ -39,7 +39,6 @@ header {
     width: 190px;
     background-color: #f8f8f8;
     padding: 20px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
     position: fixed;
     height: 100%;
 }
@@ -130,11 +129,12 @@ input, button {
     left: 0;
     width: 100%;
     padding: 10px;
-    background-color: #4caf50;
-    color: white;
+    background-color: yellow;
+    color: rgb(7, 7, 7);
     text-align: center;
     font-size: 16px;
     display: none;
+    transition: all 0.5s ease-in-out;
 }
 
 .status-bar.hidden {
@@ -143,4 +143,30 @@ input, button {
 
 .status-bar.visible {
     display: block;
+}
+
+.message-box {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    text-align: center;
+    font-weight: bold;
+    color: black;
+}
+
+.message-box.visible {
+    display: block;
+}
+
+.message-box button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
 }

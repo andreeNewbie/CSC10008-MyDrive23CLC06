@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadForm = document.getElementById('upload-form');
     const fileTableBody = document.querySelector('#file-table tbody');
     const statusBar = document.getElementById('status-bar');
+    const messageBox = document.createElement('div');
+    messageBox.classList.add('message-box');
+    document.body.appendChild(messageBox);
 
     newFileButton.addEventListener('click', () => {
         uploadModal.style.display = 'block';
@@ -62,9 +65,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('upload_response', (data) => {
         if (data.message === 'File uploaded successfully') {
-            hideStatusBar();
-            alert(data.message);
-            socket.emit('get_files', { token: token });
+            setTimeout(() => {
+                hideStatusBar();
+                showMessageBox(data.message);
+                socket.emit('get_files', { token: token });
+            }, 2000);
         } else {
             alert("Error: " + data.message);
         }
@@ -78,11 +83,28 @@ document.addEventListener('DOMContentLoaded', () => {
         statusBar.textContent = message;
         statusBar.classList.remove('hidden');
         statusBar.classList.add('visible');
+        statusBar.style.backgroundColor = 'yellow'; // Reset to yellow
     }
 
     function hideStatusBar() {
         statusBar.classList.remove('visible');
         statusBar.classList.add('hidden');
+    }
+
+    function showMessageBox(message) {
+        messageBox.innerHTML = `
+            <p>${message}</p>
+            <button id="confirmButton">OK</button>
+        `;
+        messageBox.classList.add('visible');
+
+        const confirmButton = document.getElementById('confirmButton');
+        confirmButton.removeEventListener('click', hideMessageBox); // Remove previous event listener if any
+        confirmButton.addEventListener('click', hideMessageBox, { once: true }); // Add event listener with { once: true } option
+    }
+
+    function hideMessageBox() {
+        messageBox.classList.remove('visible');
     }
 
     socket.on('file_list', (files) => {
@@ -115,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     socket.on('download_response', (data) => {
-        hideStatusBar();
+        setTimeout(hideStatusBar, 2000);
     });
 
     fetchFiles();
