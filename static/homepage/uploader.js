@@ -44,9 +44,6 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
 
         if (!this.chunksQueue.length && !this.retryQueue.length) {
             if (activeConnections === 0) {
-                const statusBar = document.getElementById('status-bar');
-                statusBar.style.backgroundColor = 'green';
-                statusBar.textContent = "Upload Complete";
                 this.complete(null);
             }
             return;
@@ -114,6 +111,9 @@ const uploader = function (socket, token, fileId, file, segmentSize, numberOfSeg
             this.end(error);
             return;
         }
+        const statusBar = document.getElementById('status-bar');
+        statusBar.style.backgroundColor = 'green';
+        statusBar.textContent = "Upload Complete";
         this.end(error);
     };
 
